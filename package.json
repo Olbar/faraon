@@ -1,0 +1,12 @@
+{
+  "name": "curse-of-the-pyramid",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Проклятие пирамиды: Побег из вечности — браузерная приключенческая игра",
+  "scripts": {
+    "test": "node --test --test-isolation=none \"tests/*.test.js\"",
+    "test:watch": "node --test --test-isolation=none --watch \"tests/*.test.js\"",
+    "serve": "python -m http.server 4173"
+  }
+}

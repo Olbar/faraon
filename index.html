@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#160f1f">
+  <meta name="description" content="Проклятие пирамиды: Побег из вечности — приключенческая игра о двадцати комнатах, ста двадцати секретах и вратах, ведущих на свободу.">
+  <title>Проклятие пирамиды: Побег из вечности</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-emblem" aria-hidden="true">
+      <span class="loading-eye"></span>
+      <span class="loading-ray"></span>
+      <span class="loading-ray loading-ray-2"></span>
+      <span class="loading-ray loading-ray-3"></span>
+    </div>
+    <p class="loading-title">Проклятие пирамиды</p>
+    <p class="loading-subtitle">Побег из вечности</p>
+    <div class="loading-track"><span></span></div>
+    <p class="loading-label">Загрузка</p>
+  </div>
+
+  <div id="app" class="app is-loading">
+    <div class="app-atmosphere" aria-hidden="true">
+      <div class="atmosphere-glow atmosphere-glow-1"></div>
+      <div class="atmosphere-glow atmosphere-glow-2"></div>
+      <div class="atmosphere-grain"></div>
+    </div>
+
+    <header class="topbar" id="topbar">
+      <div class="brand-mini">
+        <span class="brand-mini-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" focusable="false"><path d="M16 2 29 11v10L16 30 3 21V11Z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M16 8 23 13v7l-7 5-7-5v-7Z" fill="currentColor" opacity=".25"/><path d="M16 11v11M11 16h10" stroke="currentColor" stroke-width="1.2"/></svg>
+        </span>
+        <span class="brand-mini-copy">
+          <strong>Проклятие пирамиды</strong>
+          <small>Побег из вечности</small>
+        </span>
+      </div>
+
+      <div class="hud" aria-label="Состояние героя">
+        <div class="hud-room">
+          <span class="hud-label">Комната</span>
+          <div class="hud-room-line">
+            <strong id="hud-room-number">1</strong>
+            <span id="hud-room-name">Врата рассвета</span>
+          </div>
+        </div>
+        <div class="hud-stat hud-stat-secrets" title="Собрано секретов">
+          <span class="hud-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 20 8v8l-8 5-8-5V8Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 12h6M12 9v6" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+          <span class="hud-stat-copy"><span class="hud-label">Секреты</span><strong id="hud-secrets">0 / 120</strong></span>
+        </div>
+        <div class="hud-stat hud-stat-keys" title="Собрано ключей">
+          <span class="hud-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M11.5 12H21m-3 0v4m-3-4v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </span>
+          <span class="hud-stat-copy"><span class="hud-label">Ключи</span><strong id="hud-keys">0 / 20</strong></span>
+        </div>
+        <div class="hud-health" id="hud-health" aria-label="Здоровье">
+          <span class="hud-label">Здоровье</span>
+          <div id="hud-hearts" class="hearts"></div>
+        </div>
+        <div class="hud-difficulty">
+          <span class="hud-label">Сложность</span>
+          <strong id="hud-difficulty">Искатель</strong>
+        </div>
+      </div>
+
+      <nav class="utility-bar" aria-label="Игровые действия">
+        <button type="button" class="utility-button" data-ui="map" aria-label="Открыть карту">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 4v14m6-12v14" stroke="currentColor" stroke-width="1.3"/></svg>
+          <span>Карта</span>
+          <kbd>М</kbd>
+        </button>
+        <button type="button" class="utility-button" data-ui="inventory" aria-label="Открыть инвентарь">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v12H4Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 8V5h8v3M4 12h16" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>Инвентарь</span>
+          <kbd>И</kbd>
+        </button>
+        <button type="button" class="utility-button" data-ui="hint" aria-label="Показать подсказку">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3 11c.7.5 1 1.2 1 2h4c0-.8.3-1.5 1-2a6 6 0 0 0-3-11Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Подсказка</span>
+          <kbd>П</kbd>
+        </button>
+        <button type="button" class="utility-button" data-ui="pause" aria-label="Открыть паузу">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          <span>Пауза</span>
+          <kbd>К</kbd>
+        </button>
+      </nav>
+    </header>
+
+    <main class="game-main">
+      <div class="stage-wrap">
+        <div class="stage-frame">
+          <canvas id="game-canvas" width="1280" height="720" aria-label="Игровая сцена пирамиды">
+            Для игры нужен браузер с поддержкой холста.
+          </canvas>
+          <div class="stage-vignette" aria-hidden="true"></div>
+          <div class="stage-scanlines" aria-hidden="true"></div>
+          <div id="room-banner" class="room-banner">
+            <span id="room-banner-kicker">Комната 1</span>
+            <strong id="room-banner-name">Врата рассвета</strong>
+            <small id="room-banner-subtitle">Первый луч ещё не коснулся песка</small>
+          </div>
+          <div id="interaction-prompt" class="interaction-prompt" hidden>
+            <span class="interaction-key" aria-hidden="true">Е</span>
+            <span id="interaction-text">Нажмите кнопку взаимодействия</span>
+          </div>
+          <div id="autosave-indicator" class="autosave-indicator" aria-live="polite">
+            <span aria-hidden="true"></span> Прогресс сохранён
+          </div>
+          <div id="orientation-tip" class="orientation-tip">
+            <span aria-hidden="true">↻</span> Поверните устройство для удобной игры
+          </div>
+        </div>
+      </div>
+
+      <section id="touch-controls" class="touch-controls" aria-label="Сенсорное управление">
+        <div class="touch-cluster touch-move">
+          <button type="button" class="touch-button touch-direction" data-control="left" aria-label="Движение влево">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M29 12 17 24l12 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Влево</span>
+          </button>
+          <button type="button" class="touch-button touch-direction" data-control="right" aria-label="Движение вправо">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12 31 24 19 36" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Вправо</span>
+          </button>
+        </div>
+        <div class="touch-center-hint">
+          <span>Удерживайте для бега</span>
+          <small>Можно двигаться и прыгать одновременно</small>
+        </div>
+        <div class="touch-cluster touch-actions">
+          <button type="button" class="touch-button touch-interact" data-control="interact" aria-label="Взаимодействие">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M20 8v17M20 17c0-4 7-5 8 0v3M28 19c0-4 7-4 7 1v4M15 19c-4-1-6 2-4 6l5 9c1 3 4 5 8 5h2c5 0 9-3 9-8v-8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Взаимодействие</span>
+          </button>
+          <button type="button" class="touch-button touch-jump" data-control="jump" aria-label="Прыжок">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 38V14m-9 9 9-10 9 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Прыжок</span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <div class="keyboard-strip">
+      <span><b>←</b><b>→</b> движение</span>
+      <span><b>Пробел</b> прыжок</span>
+      <span><b>↑</b> взаимодействие</span>
+      <span><b>М</b> карта</span>
+      <span><b>П</b> подсказка</span>
+      <span><b>И</b> инвентарь</span>
+    </div>
+
+    <div id="toast-layer" class="toast-layer" aria-live="polite" aria-atomic="false"></div>
+    <div id="achievement-popup" class="achievement-popup" role="status" aria-live="polite" hidden>
+      <span class="achievement-popup-icon" aria-hidden="true">✦</span>
+      <div>
+        <small>Достижение открыто</small>
+        <strong id="achievement-popup-name">Следопыт</strong>
+      </div>
+    </div>
+
+    <section id="menu-screen" class="screen overlay menu-screen is-open" aria-label="Главное меню">
+      <div class="menu-decoration" aria-hidden="true">
+        <div class="menu-sun"></div>
+        <div class="menu-column menu-column-left"></div>
+        <div class="menu-column menu-column-right"></div>
+        <div class="menu-hieroglyphs"></div>
+      </div>
+      <div class="menu-content">
+        <p class="eyebrow">Подземное приключение</p>
+        <h1 class="game-title">
+          <span>Проклятие</span>
+          <span>пирамиды</span>
+        </h1>
+        <p class="game-subtitle">Побег из вечности</p>
+        <p class="menu-lead">
+          Двадцать комнат, сто двадцать секретов и врата, которые откроются только для того,
+          кто не побоится вернуться за пропущенным.
+        </p>
+        <div class="menu-actions">
+          <button type="button" id="menu-continue" class="button button-primary" disabled>
+            <span class="button-label">Продолжить</span>
+            <small id="menu-continue-meta">Сохранение не найдено</small>
+          </button>
+          <button type="button" id="menu-new" class="button button-secondary">
+            <span class="button-label">Новая игра</span>
+            <small>Выбрать сложность и начать</small>
+          </button>
+          <div class="menu-actions-row">
+            <button type="button" id="menu-tutorial" class="button button-ghost">Обучение</button>
+            <button type="button" id="menu-achievements" class="button button-ghost">Достижения</button>
+            <button type="button" id="menu-settings" class="button button-ghost">Настройки</button>
+          </div>
+        </div>
+        <div class="menu-features">
+          <span><b>20</b> комнат</span>
+          <i></i>
+          <span><b>120</b> секретов</span>
+          <i></i>
+          <span><b>4</b> сложности</span>
+        </div>
+        <p class="menu-note">Пропущенные ключи не исчезают — на карту можно вернуться в любой момент</p>
+      </div>
+      <div class="menu-footer">
+        <span>Пирамида ждёт</span>
+        <span class="menu-footer-mark" aria-hidden="true">◈</span>
+        <span>Свет не проникает в вечность</span>
+      </div>
+    </section>
+
+    <section id="difficulty-screen" class="screen modal-screen" aria-label="Выбор сложности">
+      <div class="modal-panel modal-wide">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Новая игра</p>
+            <h2>Выберите сложность</h2>
+            <p>Путь через двадцать комнат остаётся проходимым на любом уровне. Меняются только испытания.</p>
+          </div>
+          <button type="button" class="icon-button" data-close="difficulty-screen" aria-label="Закрыть выбор сложности">×</button>
+        </header>
+        <div id="difficulty-grid" class="difficulty-grid"></div>
+        <p id="new-game-warning" class="warning-note" hidden>
+          Текущий прогресс будет заменён после первого сохранения новой игры.
+        </p>
+        <footer class="modal-footer">
+          <button type="button" class="button button-ghost" data-close="difficulty-screen">Назад</button>
+          <button type="button" id="start-new-game" class="button button-primary">Начать приключение</button>
+        </footer>
+      </div>
+    </section>
+
+    <section id="tutorial-screen" class="screen modal-screen" aria-label="Обучение">
+      <div class="modal-panel modal-tutorial">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Обучение</p>
+            <h2>Как играть</h2>
+            <p>Короткое обучение перед спуском в пирамиду.</p>
+          </div>
+          <button type="button" class="icon-button" data-close="tutorial-screen" aria-label="Закрыть обучение">×</button>
+        </header>
+        <div id="tutorial-content" class="tutorial-content"></div>
+        <footer class="modal-footer">
+          <button type="button" class="button button-ghost" data-close="tutorial-screen">Покинуть обучение</button>
+          <button type="button" id="tutorial-next" class="button button-primary">Дальше</button>
+        </footer>
+      </div>
+    </section>
+
+    <section id="map-screen" class="screen modal-screen map-screen" aria-label="Карта пирамиды">
+      <div class="modal-panel modal-map">
+        <header class="modal-header map-header">
+          <div>
+            <p class="eyebrow">Архив пирамиды</p>
+            <h2>Карта</h2>
+            <p>Выберите открытую комнату, чтобы вернуться в неё. Пропущенные ключи остаются на своих местах.</p>
+          </div>
+          <div class="map-progress">
+            <span>Комнат открыто</span>
+            <strong id="map-rooms-count">1 / 20</strong>
+          </div>
+          <button type="button" class="icon-button" data-close="map-screen" aria-label="Закрыть карту">×</button>
+        </header>
+        <div class="map-body">
+          <div class="map-canvas-shell">
+            <svg id="map-lines" class="map-lines" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div id="map-nodes" class="map-nodes"></div>
+            <div class="map-compass" aria-hidden="true"><span>С</span></div>
+          </div>
+          <aside class="map-sidebar">
+            <div id="map-details" class="map-details">
+              <p class="map-details-empty">Коснитесь комнаты, чтобы узнать её состояние.</p>
+            </div>
+            <div class="map-legend">
+              <h3>Обозначения карты</h3>
+              <ul>
+                <li><span class="legend-swatch legend-complete"></span>Комната полностью исследована</li>
+                <li><span class="legend-swatch legend-partial"></span>Комната посещена, но не все предметы найдены</li>
+                <li><span class="legend-swatch legend-unvisited"></span>Комната ещё не посещалась</li>
+                <li><span class="legend-lock">✕</span>Закрытый проход</li>
+                <li><span class="legend-key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11.5 12H21m-3 0v4m-3-4v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>Предмет, который ещё можно забрать</li>
+                <li><span class="legend-question">?</span>Не найденный секрет</li>
+              </ul>
+            </div>
+            <div class="map-total">
+              <div><span>Секреты</span><strong id="map-secrets">0 / 120</strong></div>
+              <div><span>Ключи</span><strong id="map-keys">0 / 20</strong></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventory-screen" class="screen modal-screen" aria-label="Инвентарь">
+      <div class="modal-panel modal-inventory">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Сокровищница</p>
+            <h2>Инвентарь</h2>
+            <p>Все найденные предметы сохраняются. Их нельзя потерять при переходе, смерти или перезагрузке.</p>
+          </div>
+          <div class="inventory-summary">
+            <span><b id="inventory-secrets">0</b> секретов</span>
+            <span><b id="inventory-keys">0</b> ключей</span>
+          </div>
+          <button type="button" class="icon-button" data-close="inventory-screen" aria-label="Закрыть инвентарь">×</button>
+        </header>
+        <div id="inventory-content" class="inventory-content"></div>
+      </div>
+    </section>
+
+    <section id="achievements-screen" class="screen modal-screen" aria-label="Достижения">
+      <div class="modal-panel modal-achievements">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Летопись</p>
+            <h2>Достижения</h2>
+            <p>Открыто достижений: <strong id="achievements-count">0</strong> из 8</p>
+          </div>
+          <button type="button" class="icon-button" data-close="achievements-screen" aria-label="Закрыть достижения">×</button>
+        </header>
+        <div id="achievements-content" class="achievements-content"></div>
+      </div>
+    </section>
+
+    <section id="settings-screen" class="screen modal-screen" aria-label="Настройки">
+      <div class="modal-panel modal-settings">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Управление пирамидой</p>
+            <h2>Настройки</h2>
+            <p>Изменения сохраняются автоматически.</p>
+          </div>
+          <button type="button" class="icon-button" data-close="settings-screen" aria-label="Закрыть настройки">×</button>
+        </header>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div><strong>Звук</strong><span>Музыка и звуковые эффекты</span></div>
+            <button type="button" id="setting-sound" class="toggle" role="switch" aria-checked="true"><span></span></button>
+          </div>
+          <div class="setting-row">
+            <div><strong>Вибрация</strong><span>Короткий отклик на сенсорных устройствах</span></div>
+            <button type="button" id="setting-vibration" class="toggle" role="switch" aria-checked="true"><span></span></button>
+          </div>
+          <div class="setting-row">
+            <div><strong>Обучение</strong><span>Показывать подсказки управления при новой игре</span></div>
+            <button type="button" id="setting-tutorial" class="toggle" role="switch" aria-checked="true"><span></span></button>
+          </div>
+          <div class="setting-row setting-row-danger">
+            <div><strong>Сбросить прогресс</strong><span>Удалить сохранение и начать с начала</span></div>
+            <button type="button" id="setting-reset" class="button button-danger">Сбросить</button>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <span class="settings-note">Сложность можно изменить только при новой игре.</span>
+          <button type="button" class="button button-primary" data-close="settings-screen">Готово</button>
+        </footer>
+      </div>
+    </section>
+
+    <section id="hint-screen" class="screen modal-screen" aria-label="Подсказка">
+      <div class="modal-panel modal-hint">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Дух-хранитель</p>
+            <h2>Подсказка</h2>
+          </div>
+          <button type="button" class="icon-button" data-close="hint-screen" aria-label="Закрыть подсказку">×</button>
+        </header>
+        <div class="hint-body">
+          <div class="hint-eye" aria-hidden="true"><span></span></div>
+          <p class="hint-room" id="hint-room">Врата рассвета</p>
+          <p class="hint-text" id="hint-text"></p>
+          <div class="hint-progress">
+            <div><span>Осталось найти</span><strong id="hint-remaining">6 секретов</strong></div>
+            <div><span>Печатей пробуждено</span><strong id="hint-plates">0 из 3</strong></div>
+          </div>
+          <p class="hint-extra" id="hint-extra"></p>
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="button button-ghost" data-close="hint-screen">Закрыть подсказку</button>
+          <button type="button" id="hint-open-map" class="button button-secondary">Открыть карту</button>
+        </footer>
+      </div>
+    </section>
+
+    <section id="pause-screen" class="screen modal-screen" aria-label="Пауза">
+      <div class="modal-panel modal-pause">
+        <div class="pause-emblem" aria-hidden="true">Ⅱ</div>
+        <p class="eyebrow">Передышка</p>
+        <h2>Пауза</h2>
+        <p class="pause-subtitle">Пирамида ждёт вашего возвращения</p>
+        <div class="pause-stats">
+          <div><span>Комната</span><strong id="pause-room">1</strong></div>
+          <div><span>Секреты</span><strong id="pause-secrets">0 / 120</strong></div>
+          <div><span>Ключи</span><strong id="pause-keys">0 / 20</strong></div>
+        </div>
+        <div class="pause-actions">
+          <button type="button" id="pause-resume" class="button button-primary">Продолжить</button>
+          <button type="button" id="pause-save" class="button button-secondary">Сохранить игру</button>
+          <button type="button" id="pause-map" class="button button-secondary">Открыть карту</button>
+          <button type="button" id="pause-achievements" class="button button-ghost">Достижения</button>
+          <button type="button" id="pause-settings" class="button button-ghost">Настройки</button>
+          <button type="button" id="pause-menu" class="button button-ghost">В главное меню</button>
+        </div>
+        <p class="pause-note">Прогресс уже сохранён</p>
+      </div>
+    </section>
+
+    <section id="victory-screen" class="screen victory-screen" aria-label="Победа">
+      <div class="victory-rays" aria-hidden="true"></div>
+      <div class="victory-particles" id="victory-particles" aria-hidden="true"></div>
+      <div class="victory-content">
+        <p class="eyebrow">Врата Вечности открыты</p>
+        <h2>Победа!</h2>
+        <p id="victory-subtitle" class="victory-subtitle">Проклятие разрушено</p>
+        <div class="victory-divider" aria-hidden="true"><span></span><i>◈</i><span></span></div>
+        <p id="victory-ending" class="victory-ending"></p>
+        <div class="victory-stats">
+          <div><span>Секреты</span><strong id="victory-secrets">0 / 120</strong></div>
+          <div><span>Ключи</span><strong id="victory-keys">20 / 20</strong></div>
+          <div><span>Комнаты</span><strong id="victory-rooms">20 / 20</strong></div>
+          <div><span>Загадки</span><strong id="victory-puzzles">0 / 20</strong></div>
+        </div>
+        <p id="victory-perfect" class="victory-perfect" hidden>Совершенная концовка: все тайны пирамиды раскрыты.</p>
+        <div class="victory-actions">
+          <button type="button" id="victory-again" class="button button-primary">Пройти ещё раз</button>
+          <button type="button" id="victory-menu" class="button button-ghost">Вернуться в меню</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="defeat-screen" class="screen defeat-screen" aria-label="Поражение">
+      <div class="defeat-shadow" aria-hidden="true"></div>
+      <div class="defeat-content">
+        <p class="eyebrow">Тьма сгущается</p>
+        <h2>Игра окончена</h2>
+        <p class="defeat-subtitle">Тьма пирамиды оказалась сильнее</p>
+        <div class="defeat-message">
+          <span aria-hidden="true">◈</span>
+          <p>Все найденные предметы и открытые комнаты сохранены.<br>Можно продолжить с этой же комнаты.</p>
+        </div>
+        <div class="defeat-actions">
+          <button type="button" id="defeat-continue" class="button button-primary">Продолжить с этой комнаты</button>
+          <button type="button" id="defeat-menu" class="button button-ghost">В главное меню</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="confirm-screen" class="screen modal-screen" aria-label="Подтверждение">
+      <div class="modal-panel modal-confirm">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Важное решение</p>
+            <h2 id="confirm-title">Сбросить прогресс?</h2>
+            <p id="confirm-text">Стереть всё сохранение и начать с начала?</p>
+          </div>
+        </header>
+        <footer class="modal-footer">
+          <button type="button" id="confirm-cancel" class="button button-ghost">Отмена</button>
+          <button type="button" id="confirm-accept" class="button button-danger">Да, стереть прогресс</button>
+        </footer>
+      </div>
+    </section>
+
+    <noscript><p class="noscript-note">Для игры нужны скрипты браузера.</p></noscript>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
