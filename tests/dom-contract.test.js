@@ -35,7 +35,7 @@ describe("контракт разметки и приложения", () => {
   });
 
   it("подключает сенсорные кнопки для всех обязательных действий", () => {
-    for (const action of ["left", "right", "jump", "interact"]) {
+    for (const action of ["left", "right", "up", "down", "jump", "interact"]) {
       assert.match(html, new RegExp(`data-control="${action}"`));
     }
     assert.match(html, /data-ui="map"/);

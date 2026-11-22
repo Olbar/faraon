@@ -57,7 +57,8 @@ await send("Emulation.setDeviceMetricsOverride", {
 });
 await send("Page.navigate", { url: "http://127.0.0.1:4173/?debug=1" });
 await sleep(1500);
-await evaluate("localStorage.clear(); location.reload();");
+await evaluate("localStorage.clear()");
+await send("Page.reload", { ignoreCache: true });
 await sleep(1700);
 await evaluate("document.querySelector('#menu-new').click()");
 await sleep(220);
@@ -82,7 +83,7 @@ for (const plate of plates) {
     p.vy = 0;
     p.onGround = true;
   })()`);
-  await sleep(180);
+  await sleep(500);
   puzzle.push(plate.index);
 }
 await sleep(250);
@@ -99,6 +100,29 @@ console.log("puzzle", puzzle, puzzleAfter);
 if (!puzzleAfter.solved || !puzzleAfter.hiddenAvailable) {
   throw new Error("Загадка или скрытый тайник не сработали");
 }
+
+const wallZone = await evaluate(`(() => {
+  const app = window.__pyramid;
+  const item = app.state.game.room.items.find((entry) => entry.conceal === 'wall');
+  return { id: item.id, zone: item.revealZone };
+})()`);
+await evaluate(`(() => {
+  const app = window.__pyramid;
+  const p = app.state.player;
+  p.x = ${wallZone.zone.x} + ${wallZone.zone.w} / 2 - p.width / 2;
+  p.y = ${wallZone.zone.y} + ${wallZone.zone.h} - p.height;
+  p.vx = 0;
+  p.vy = 0;
+  p.onGround = false;
+})()`);
+await sleep(180);
+await key("keyDown", "KeyE", "e", 69);
+await sleep(90);
+await key("keyUp", "KeyE", "e", 69);
+await sleep(280);
+const wallRevealed = await evaluate(`window.__pyramid.state.game.isSecretRevealed(1, ${JSON.stringify(wallZone.id)})`);
+console.log("wall secret", wallRevealed);
+if (!wallRevealed) throw new Error("Тайник в стене не открылся через взаимодействие");
 
 let collected = 0;
 const items = await evaluate("window.__pyramid.state.game.room.items.map((item) => ({id:item.id,x:item.x,y:item.y,type:item.type,hidden:item.hidden}))");
@@ -133,6 +157,39 @@ if (room1.status !== "complete" || room1.collected < 6) {
   throw new Error("Сбор предметов через сцену не сработал");
 }
 
+const fallCheck = await evaluate(`(() => {
+  const app = window.__pyramid;
+  const g = app.state.game;
+  const p = app.state.player;
+  g.setHealth(g.maxHealth);
+  p.health = g.maxHealth;
+  p.invulnerable = 0;
+  const chasm = g.room.chasms[0];
+  p.x = chasm.x + chasm.w / 2 - p.width / 2;
+  p.y = 810;
+  p.vx = 0;
+  p.vy = 0;
+  p.onGround = false;
+  return { y: p.y };
+})()`);
+await sleep(900);
+const afterFall = await evaluate(`(() => {
+  const app = window.__pyramid;
+  const g = app.state.game;
+  const p = app.state.player;
+  return {
+    health: g.health,
+    y: p.y,
+    fallen: Boolean(p.fallen),
+    safe: p.lastSafe,
+    sameRoom: g.currentRoom === 1,
+  };
+})()`);
+console.log("fall", fallCheck, afterFall);
+if (afterFall.health >= 4 || afterFall.fallen || !afterFall.sameRoom) {
+  throw new Error("Падение в обрыв не обработалось");
+}
+
 await evaluate(`(() => {
   const app = window.__pyramid;
   const g = app.state.game;
@@ -140,7 +197,7 @@ await evaluate(`(() => {
   g.setHealth(1);
   p.health = 1;
   p.invulnerable = 0;
-  const hazard = g.room.hazards[0];
+  const hazard = g.room.hazards.find((entry) => entry.kind === 'lava' || entry.kind === 'spikes');
   p.x = hazard.x + hazard.w / 2;
   p.y = 630;
   p.vx = 0;
@@ -180,6 +237,8 @@ await evaluate(`
     for (let id = 1; id <= 20; id += 1) {
       g.enterRoom(id, { silent: true });
       for (const [index] of g.room.puzzle.plates.entries()) g.touchPuzzlePlate(id, index);
+      const wallSecret = g.room.items.find((item) => item.conceal === 'wall');
+      if (wallSecret) g.revealSecret(id, wallSecret.id);
       for (const item of g.room.items) g.collectItem(item.id);
     }
     g.enterRoom(20, { silent: true });
@@ -193,9 +252,24 @@ await evaluate(`
   })()
 `);
 await sleep(250);
-await key("keyDown", "ArrowUp", "ArrowUp", 38);
-await sleep(80);
-await key("keyUp", "ArrowUp", "ArrowUp", 38);
+const beforeGate = await evaluate(`(() => {
+  const app = window.__pyramid;
+  const g = app.state.game;
+  const p = app.state.player;
+  return {
+    keys: g.keysFound(),
+    secrets: g.collectedCount(),
+    canFinish: g.canFinish(),
+    room: g.currentRoom,
+    mode: app.state.mode,
+    stack: app.state.screenStack,
+    player: { x: p.x, y: p.y },
+  };
+})()`);
+console.log("before gate", beforeGate);
+await key("keyDown", "KeyE", "e", 69);
+await sleep(650);
+await key("keyUp", "KeyE", "e", 69);
 await sleep(700);
 const victory = await evaluate(`(() => ({
   open: document.querySelector('#victory-screen').classList.contains('is-open'),

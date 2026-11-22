@@ -11,6 +11,9 @@ import {
   TOTAL_SECRETS,
 } from "../src/content.js";
 import { createGame } from "../src/game.js";
+import { WORLD } from "../src/content.js";
+
+const ADVANCED_HAZARDS = new Set(["blade", "flame", "sandstorm", "fallingStone"]);
 
 describe("контент пирамиды", () => {
   it("содержит ровно 20 комнат с уникальными номерами", () => {
@@ -45,6 +48,70 @@ describe("контент пирамиды", () => {
     for (const room of ROOMS) {
       const key = room.items.find((item) => item.type === "key");
       assert.equal(Boolean(key.hidden), false, `Ключ комнаты ${room.id} не должен быть скрыт`);
+      assert.equal(Boolean(key.conceal), false, `Ключ комнаты ${room.id} не должен быть спрятан`);
+    }
+  });
+
+  it("содержит новые препятствия, лестницы, канаты и обрывы", () => {
+    let advancedCount = 0;
+
+    for (const room of ROOMS) {
+      assert.ok(room.ladders.length >= 1, `В комнате ${room.id} нет лестницы`);
+      assert.ok(room.ropes.length >= 1, `В комнате ${room.id} нет каната`);
+      assert.ok(room.chasms.length >= 1, `В комнате ${room.id} нет обрыва`);
+      assert.ok(room.floors.length >= 2, `В комнате ${room.id} нет сегментов пола`);
+
+      const chasmWidth = room.chasms.reduce((sum, chasm) => sum + chasm.w, 0);
+      assert.equal(
+        room.floors.reduce((sum, floor) => sum + floor.w, 0) + chasmWidth,
+        WORLD.width,
+        `Пол и обрывы комнаты ${room.id} не покрывают ширину мира`,
+      );
+
+      for (const chasm of room.chasms) {
+        assert.ok(chasm.x > 100 && chasm.x + chasm.w < 1180);
+        assert.ok(chasm.w >= 60 && chasm.w <= 150, `Слишком широкий обрыв в комнате ${room.id}`);
+      }
+
+      for (const climbable of [...room.ladders, ...room.ropes]) {
+        assert.equal(climbable.y + climbable.h, WORLD.floorY);
+        assert.ok(climbable.x > 100 && climbable.x + climbable.w < 1180);
+        assert.ok(climbable.h > 80);
+        const blockingHazard = room.hazards.find(
+          (hazard) =>
+            ["lava", "spikes", "flame"].includes(hazard.kind) &&
+            typeof hazard.x === "number" &&
+            climbable.x < hazard.x + hazard.w + 10 &&
+            climbable.x + climbable.w > hazard.x - 10,
+        );
+        assert.equal(
+          Boolean(blockingHazard),
+          false,
+          `Лестница или канат комнаты ${room.id} ведёт прямо в ловушку`,
+        );
+      }
+
+      for (const hazard of room.hazards) {
+        if (ADVANCED_HAZARDS.has(hazard.kind)) advancedCount += 1;
+      }
+    }
+
+    assert.ok(advancedCount >= 20, "Новые ловушки должны встречаться по всей пирамиде");
+  });
+
+  it("прячет по одному тайнику в нише и загадке в каждой комнате", () => {
+    for (const room of ROOMS) {
+      const faint = room.items.filter((item) => item.conceal === "faint");
+      const wall = room.items.filter((item) => item.conceal === "wall");
+      const puzzle = room.items.filter((item) => item.hidden);
+
+      assert.equal(faint.length, 1);
+      assert.equal(wall.length, 1);
+      assert.equal(puzzle.length, 1);
+      assert.ok(wall[0].revealZone.x > 0);
+      assert.ok(wall[0].revealZone.y > 0);
+      assert.ok(wall[0].revealZone.w >= 40);
+      assert.ok(wall[0].revealZone.h >= 40);
     }
   });
 
@@ -65,7 +132,7 @@ describe("контент пирамиды", () => {
 
   it("размещает каждый предмет внутри игрового мира", () => {
     for (const room of ROOMS) {
-      assert.ok(room.platforms.length >= 4, `В комнате ${room.id} мало платформ`);
+      assert.ok(room.platforms.length >= 6, `В комнате ${room.id} мало платформ`);
       assert.ok(room.hint.length > 15, `В комнате ${room.id} нет подсказки`);
       assert.ok(room.description.length > 15, `В комнате ${room.id} нет описания`);
       assert.ok(room.connections.length >= 1);

@@ -1,6 +1,8 @@
 export const CONTROL_ACTIONS = Object.freeze([
   "left",
   "right",
+  "up",
+  "down",
   "jump",
   "interact",
   "hint",
@@ -62,6 +64,8 @@ export class TouchControls {
     return {
       left: this.isPressed("left"),
       right: this.isPressed("right"),
+      up: this.isPressed("up"),
+      down: this.isPressed("down"),
       jump: this.isPressed("jump"),
       interact: this.isPressed("interact"),
       hint: this.isPressed("hint"),
@@ -103,8 +107,10 @@ export class KeyboardControls {
     return {
       left: this.keys.has("ArrowLeft") || this.keys.has("KeyA"),
       right: this.keys.has("ArrowRight") || this.keys.has("KeyD"),
+      up: this.keys.has("ArrowUp"),
+      down: this.keys.has("ArrowDown") || this.keys.has("KeyS"),
       jump: this.keys.has("Space") || this.keys.has("KeyW"),
-      interact: this.keys.has("ArrowUp") || this.keys.has("KeyE") || this.keys.has("Enter"),
+      interact: this.keys.has("KeyE") || this.keys.has("Enter"),
       hint: this.keys.has("KeyH") || this.keys.has("KeyG"),
       map: this.keys.has("KeyM") || this.keys.has("KeyV"),
       inventory: this.keys.has("KeyI") || this.keys.has("KeyB"),
@@ -125,6 +131,8 @@ export class CompositeControls {
     const result = {
       left: false,
       right: false,
+      up: false,
+      down: false,
       jump: false,
       interact: false,
       hint: false,

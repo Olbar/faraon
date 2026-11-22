@@ -21,6 +21,18 @@ function reachablePlatforms(room) {
     }
   }
 
+  for (const climbable of [...room.ladders, ...room.ropes]) {
+    const center = climbable.x + climbable.w / 2;
+    for (const platform of platforms) {
+      if (center < platform.x || center > platform.x + platform.w) continue;
+      if (platform.y !== climbable.topPlatformY) continue;
+      if (!reachable.has(platform)) {
+        reachable.add(platform);
+        queue.push(platform);
+      }
+    }
+  }
+
   while (queue.length > 0) {
     const current = queue.shift();
     for (const platform of platforms) {
@@ -69,11 +81,16 @@ describe("физическая доступность всех предмето�
       }
 
       assert.ok(
-        room.platforms.some(
-          (platform) => platform.kind === "floor" && platform.y === WORLD.floorY,
-        ),
-        "В комнате должен быть проходимый пол",
+        room.floors.length >= 2,
+        "В комнате должны быть края обрыва",
       );
+
+      for (const chasm of room.chasms) {
+        assert.ok(
+          chasm.w <= 150,
+          `Обрыв в комнате ${room.id} слишком широк для прыжка`,
+        );
+      }
     }
   });
 });

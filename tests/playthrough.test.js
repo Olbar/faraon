@@ -17,6 +17,14 @@ function skipKey(game, roomId) {
   }
 }
 
+function revealWallSecrets(game, room) {
+  for (const item of room.items) {
+    if (item.conceal === "wall" && !game.isSecretRevealed(room.id, item.id)) {
+      game.revealSecret(room.id, item.id);
+    }
+  }
+}
+
 function collectEverythingExceptSkippedKeys(game) {
   for (const room of ROOMS) {
     game.enterRoom(room.id);
@@ -86,6 +94,7 @@ describe("сквозное прохождение и защита от тупи�
         for (const [index] of room.puzzle.plates.entries()) {
           game.touchPuzzlePlate(room.id, index);
         }
+        revealWallSecrets(game, room);
         for (const item of room.items) {
           game.collectItem(item.id);
         }
@@ -129,7 +138,7 @@ describe("сквозное прохождение и защита от тупи�
   });
 
   it("сохраняет прогресс после смерти во время исследования", () => {
-    const game = createGame({ difficulty: "cursed" });
+    const game = createGame({ difficulty: "nightmare" });
     game.enterRoom(11);
     const room = ROOMS[10];
 
@@ -151,6 +160,7 @@ describe("сквозное прохождение и защита от тупи�
     for (const [index] of room.puzzle.plates.entries()) {
       game.touchPuzzlePlate(10, index);
     }
+    revealWallSecrets(game, room);
     for (const item of room.items) {
       game.collectItem(item.id);
     }

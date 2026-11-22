@@ -80,7 +80,8 @@ async function tapKey(code, keyValue, vk, hold = 60) {
 async function startFreshGame() {
   await cdp.send("Page.navigate", { url: "http://127.0.0.1:4173/?debug=1" });
   await sleep(1400);
-  await evaluate("localStorage.clear(); location.reload();");
+  await evaluate("localStorage.clear()");
+  await cdp.send("Page.reload", { ignoreCache: true });
   await sleep(1800);
   await evaluate("document.querySelector('#menu-new').click()");
   await sleep(250);
@@ -118,6 +119,17 @@ const moved = await evaluate(`(() => {
 console.log("moved", moved);
 if (moved.x <= start.x + 40) throw new Error("Клавиатурное движение не сработало");
 
+await evaluate(`(() => {
+  const p = window.__pyramid.state.player;
+  p.x = 300;
+  p.y = 596;
+  p.vx = 0;
+  p.vy = 0;
+  p.onGround = true;
+  p.fallen = false;
+})()`);
+await sleep(120);
+
 await tapKey("Space", " ", 32, 90);
 await sleep(260);
 const jump = await evaluate(`(() => {
@@ -139,6 +151,31 @@ const doubleJump = await evaluate(`(() => {
 console.log("double jump", doubleJump);
 if (doubleJump.jumpsUsed < 2) throw new Error("Двойной прыжок не сработал");
 
+const ladder = await evaluate(`(() => {
+  const app = window.__pyramid;
+  const p = app.state.player;
+  const ladder = app.state.game.room.ladders[0];
+  p.x = ladder.x + ladder.w / 2 - p.width / 2;
+  p.y = 596;
+  p.vx = 0;
+  p.vy = 0;
+  p.onGround = true;
+  return { startY: p.y, topY: ladder.y };
+})()`);
+await sleep(100);
+await key("keyDown", "ArrowUp", "ArrowUp", 38);
+await sleep(1200);
+await key("keyUp", "ArrowUp", "ArrowUp", 38);
+await sleep(100);
+const climbed = await evaluate(`(() => {
+  const p = window.__pyramid.state.player;
+  return { y: p.y, climbing: p.isClimbing(), onLadder: p.onLadder };
+})()`);
+console.log("climbed", ladder, climbed);
+if (climbed.y >= ladder.startY - 30 || !climbed.onLadder) {
+  throw new Error("Лазание по лестнице не сработало");
+}
+
 await evaluate(`(() => {
   const app = window.__pyramid;
   const p = app.state.player;
@@ -150,7 +187,7 @@ await evaluate(`(() => {
   return { x: p.x, room: app.state.game.currentRoom };
 })()`);
 await sleep(60);
-await tapKey("ArrowUp", "ArrowUp", 38, 80);
+await tapKey("KeyE", "e", 69, 80);
 await sleep(300);
 const afterDoor = await evaluate(`(() => {
   const app = window.__pyramid;
@@ -251,6 +288,7 @@ const rects = await evaluate(`(() => {
   return {
     right: get('[data-control="right"]'),
     jump: get('[data-control="jump"]'),
+    up: get('[data-control="up"]'),
     playerX: p.x,
     playerY: p.y,
     display: getComputedStyle(document.querySelector('#touch-controls')).display,
@@ -281,6 +319,36 @@ const touchReleased = await evaluate(`(() => {
 })()`);
 console.log("touch released", touchReleased);
 if (touchReleased.moving) throw new Error("Движение не остановилось");
+
+const touchLadder = await evaluate(`(() => {
+  const app = window.__pyramid;
+  const p = app.state.player;
+  const ladder = app.state.game.room.ladders[0];
+  p.x = ladder.x + ladder.w / 2 - p.width / 2;
+  p.y = 596;
+  p.vx = 0;
+  p.vy = 0;
+  p.onGround = true;
+  p.fallen = false;
+  return { startY: p.y };
+})()`);
+await sleep(120);
+await cdp.send("Input.dispatchTouchEvent", {
+  type: "touchStart",
+  touchPoints: [
+    { x: rects.up.x, y: rects.up.y, id: 7, radiusX: 4, radiusY: 4, force: 1 },
+  ],
+});
+await sleep(1200);
+const touchClimb = await evaluate(`(() => {
+  const p = window.__pyramid.state.player;
+  return { y: p.y, climbing: p.isClimbing(), onLadder: p.onLadder };
+})()`);
+await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+console.log("touch climb", touchLadder, touchClimb);
+if (touchClimb.y >= touchLadder.startY - 25 || !touchClimb.onLadder) {
+  throw new Error("Сенсорное лазание не сработало");
+}
 
 const pageChecks = await evaluate(`(() => {
   const touch = document.querySelector('#touch-controls').getBoundingClientRect();

@@ -16,6 +16,7 @@ import {
   loadGame,
 } from "./game.js";
 import { createPlayer, PLAYER_PHYSICS } from "./player.js";
+import { getHazardState } from "./hazards.js";
 import { GameRenderer } from "./renderer.js";
 import {
   APP_TEXT,
@@ -293,6 +294,8 @@ const state = {
   interactPrev: false,
   lastTouchInteractAt: 0,
   nearDoor: null,
+  nearSecret: null,
+  hazardTime: 0,
   endingOpen: false,
 };
 
@@ -463,6 +466,7 @@ function startSession(game) {
     health: game.health,
   });
   state.player.animationTime = 0;
+  state.hazardTime = 0;
 
   state.screenStack = [];
   refreshHud();
@@ -488,6 +492,7 @@ function prepareRoomEntry(options = {}) {
     health: game.health,
   });
   state.player.animationTime = 0;
+  state.hazardTime = 0;
   state.touch.releaseAll();
   state.keyboard.releaseAll();
   state.interactPrev = false;
@@ -548,6 +553,7 @@ function loop(now) {
     if (!isPaused()) updatePlaying(delta);
     state.renderer.render(state.game, state.player, {
       hazardSpeed: state.game.difficultyData.hazardSpeed,
+      hazardTime: state.hazardTime * state.game.difficultyData.hazardSpeed,
     });
     updateInteractionPrompt();
   } else if (state.previewGame && state.previewPlayer) {
@@ -568,16 +574,14 @@ function updatePlaying(delta) {
   const substeps = 2;
   const step = delta / substeps;
 
+  state.hazardTime += delta;
+
   for (let index = 0; index < substeps; index += 1) {
     state.player.update(input, step, room);
   }
 
   if (state.player.fallen) {
-    state.player.fallen = false;
-    state.renderer.setShake(10);
-    state.renderer.setFlash(0.28, "207,98,108");
-    state.player.resetTo(room.start.x, room.start.y);
-    toast(DYNAMIC_TEXT.positionRespawn(), "warning");
+    if (!handleChasmFall()) return;
   }
 
   checkCollectibles();
@@ -592,6 +596,38 @@ function updatePlaying(delta) {
   state.interactPrev = keyboardInput.interact;
 
   refreshHud();
+}
+
+function handleChasmFall() {
+  const { game, player } = state;
+  if (!game || !player) return false;
+  player.fallen = false;
+  player.invulnerable = 0;
+  const damaged = player.damage(game.difficultyData.damage);
+  if (!damaged) {
+    player.health = Math.max(0, player.health - game.difficultyData.damage);
+  }
+  game.setHealth(player.health);
+  game.autosave();
+
+  state.renderer.setShake(18);
+  state.renderer.setFlash(0.42, "207,98,108");
+  state.sound.play("damage");
+  vibrate([45, 60, 45]);
+  refreshHud();
+
+  if (player.health <= 0) {
+    showDefeat();
+    return false;
+  }
+
+  const safe = player.lastSafe ?? game.room.start;
+  player.respawn(safe.x, safe.y);
+  player.health = game.health;
+  player.invulnerable = 1.2;
+  toast(DYNAMIC_TEXT.fallDamage(player.health), "warning");
+  flashAutosave();
+  return true;
 }
 
 function roomBounds() {
@@ -721,14 +757,17 @@ function checkHazards() {
     w: player.width - 10,
     h: player.height - 8,
   };
+  const hazardTime = state.hazardTime * game.difficultyData.hazardSpeed;
 
   for (const hazard of room.hazards) {
-    const hitbox = {
-      x: hazard.x,
-      y: hazard.y - 8,
-      w: hazard.w,
-      h: hazard.h + 8,
-    };
+    const hazardState = getHazardState(hazard, hazardTime);
+    if (!hazardState.active || !hazardState.bounds) continue;
+
+    const hitbox = { ...hazardState.bounds };
+    if (hazard.kind === "spikes" || hazard.kind === "lava") {
+      hitbox.y -= 8;
+      hitbox.h += 8;
+    }
     if (!rectsOverlap(playerBounds, hitbox)) continue;
 
     const damaged = player.damage(game.difficultyData.damage);
@@ -785,11 +824,35 @@ function getNearDoor() {
   return null;
 }
 
+function getNearSecret() {
+  const { player, game } = state;
+  if (!player || !game) return null;
+  for (const item of game.room.items) {
+    if (item.conceal !== "wall" || !item.revealZone) continue;
+    if (game.isSecretRevealed(game.currentRoom, item.id)) continue;
+    if (game.isCollected(item.id)) continue;
+    if (nearRect(player, item.revealZone, 16)) {
+      return { type: "secret", item, zone: item.revealZone };
+    }
+  }
+  return null;
+}
+
 function updateInteractionPrompt() {
   if (!state.game || state.mode !== "playing" || isPaused()) {
     hideInteractionPrompt();
     return;
   }
+
+  const secret = getNearSecret();
+  state.nearSecret = secret;
+  if (secret) {
+    $("#interaction-text").textContent = DYNAMIC_TEXT.examineWall();
+    $("#interaction-prompt").hidden = false;
+    state.nearDoor = null;
+    return;
+  }
+
   const near = getNearDoor();
   state.nearDoor = near;
   if (!near) {
@@ -817,10 +880,35 @@ function hideInteractionPrompt() {
   const prompt = $("#interaction-prompt");
   if (prompt) prompt.hidden = true;
   state.nearDoor = null;
+  state.nearSecret = null;
 }
 
 function handleInteract() {
   if (!state.game || state.mode !== "playing" || isPaused()) return;
+
+  const secret = getNearSecret();
+  if (secret) {
+    const { game, player } = state;
+    if (game.revealSecret(game.currentRoom, secret.item.id)) {
+      const centerX = secret.zone.x + secret.zone.w / 2;
+      const centerY = secret.zone.y + secret.zone.h / 2;
+      state.renderer.spawnParticles(centerX, centerY, {
+        count: 34,
+        spread: 150,
+        colors: ["#79c9b8", "#b5fff0", "#e4bd6b", "#f9e2a4"],
+      });
+      state.renderer.setFlash(0.2, "121,201,184");
+      state.renderer.setShake(5);
+      state.sound.play("secret");
+      vibrate([16, 24, 16]);
+      toast(DYNAMIC_TEXT.secretRevealed(secret.item.name), "secret");
+      if (player) player.invulnerable = Math.max(player.invulnerable, 0.4);
+      refreshHud();
+      flashAutosave();
+    }
+    return;
+  }
+
   const near = getNearDoor();
   if (!near) return;
 
@@ -1427,6 +1515,14 @@ function openHint() {
     extras.push(DYNAMIC_TEXT.hintKey());
   }
   if (!game.isPuzzleSolved(room.id)) extras.push(DYNAMIC_TEXT.hintPuzzle());
+  const wallSecret = room.items.find((item) => item.conceal === "wall");
+  if (
+    wallSecret &&
+    !game.isSecretRevealed(room.id, wallSecret.id) &&
+    !game.isCollected(wallSecret.id)
+  ) {
+    extras.push(DYNAMIC_TEXT.hintWallSecret());
+  }
   if (room.finalGate && !game.canFinish()) {
     extras.push(DYNAMIC_TEXT.hintGate(game.keysRemaining()));
   }

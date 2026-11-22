@@ -292,6 +292,21 @@ const BASE_LAYOUTS = [
     hazards: [
       { x: 390, y: 638, w: 170, h: 12, kind: "lava" },
       { x: 980, y: 638, w: 140, h: 12, kind: "spikes" },
+      {
+        kind: "blade",
+        pivotX: 690,
+        pivotY: 150,
+        length: 260,
+        arc: 1.05,
+        speed: 0.85,
+        phase: 0.4,
+        w: 54,
+        h: 54,
+      },
+    ],
+    chasms: [
+      { x: 150, w: 80 },
+      { x: 820, w: 90 },
     ],
     plates: [
       { x: 496, y: 448, w: 44, h: 12 },
@@ -312,6 +327,21 @@ const BASE_LAYOUTS = [
       { x: 330, y: 638, w: 150, h: 12, kind: "lava" },
       { x: 540, y: 638, w: 120, h: 12, kind: "spikes" },
       { x: 880, y: 638, w: 110, h: 12, kind: "lava" },
+      {
+        kind: "flame",
+        x: 505,
+        y: 548,
+        w: 30,
+        h: 102,
+        period: 2.6,
+        phase: 0.2,
+        dutyCycle: 0.44,
+        speed: 1,
+      },
+    ],
+    chasms: [
+      { x: 150, w: 80 },
+      { x: 720, w: 80 },
     ],
     plates: [
       { x: 188, y: 500, w: 44, h: 12 },
@@ -332,6 +362,20 @@ const BASE_LAYOUTS = [
       { x: 290, y: 638, w: 130, h: 12, kind: "spikes" },
       { x: 590, y: 638, w: 160, h: 12, kind: "lava" },
       { x: 1060, y: 638, w: 100, h: 12, kind: "spikes" },
+      {
+        kind: "sandstorm",
+        x: 430,
+        y: 478,
+        w: 84,
+        h: 154,
+        range: 165,
+        speed: 0.7,
+        phase: 0.6,
+      },
+    ],
+    chasms: [
+      { x: 170, w: 80 },
+      { x: 800, w: 80 },
     ],
     plates: [
       { x: 118, y: 450, w: 44, h: 12 },
@@ -351,6 +395,21 @@ const BASE_LAYOUTS = [
     hazards: [
       { x: 380, y: 638, w: 140, h: 12, kind: "lava" },
       { x: 770, y: 638, w: 130, h: 12, kind: "spikes" },
+      {
+        kind: "fallingStone",
+        x: 735,
+        y: 68,
+        w: 56,
+        h: 56,
+        period: 3.3,
+        phase: 0.8,
+        speed: 1,
+        floorY: 650,
+      },
+    ],
+    chasms: [
+      { x: 180, w: 80 },
+      { x: 620, w: 80 },
     ],
     plates: [
       { x: 486, y: 480, w: 44, h: 12 },
@@ -371,6 +430,21 @@ const BASE_LAYOUTS = [
       { x: 310, y: 638, w: 100, h: 12, kind: "spikes" },
       { x: 570, y: 638, w: 120, h: 12, kind: "lava" },
       { x: 860, y: 638, w: 120, h: 12, kind: "spikes" },
+      {
+        kind: "blade",
+        pivotX: 560,
+        pivotY: 130,
+        length: 270,
+        arc: 1.05,
+        speed: 1.05,
+        phase: 0.9,
+        w: 50,
+        h: 50,
+      },
+    ],
+    chasms: [
+      { x: 160, w: 80 },
+      { x: 750, w: 80 },
     ],
     plates: [
       { x: 146, y: 520, w: 44, h: 12 },
@@ -386,15 +460,124 @@ function mirrorLayout(layout) {
       ...platform,
       x: WORLD.width - platform.x - platform.w,
     })),
-    hazards: layout.hazards.map((hazard) => ({
-      ...hazard,
-      x: WORLD.width - hazard.x - hazard.w,
-    })),
+    hazards: layout.hazards.map((hazard) => {
+      const mirrored = { ...hazard };
+      if (typeof hazard.x === "number") {
+        mirrored.x = WORLD.width - hazard.x - hazard.w;
+      }
+      if (typeof hazard.pivotX === "number") {
+        mirrored.pivotX = WORLD.width - hazard.pivotX;
+      }
+      return mirrored;
+    }),
     plates: layout.plates.map((plate) => ({
       ...plate,
       x: WORLD.width - plate.x - plate.w,
     })),
+    chasms: layout.chasms.map((chasm) => ({
+      ...chasm,
+      x: WORLD.width - chasm.x - chasm.w,
+    })),
   };
+}
+
+function buildFloorSections(chasms) {
+  const sections = [];
+  let cursor = 0;
+  for (const chasm of [...chasms].sort((a, b) => a.x - b.x)) {
+    if (chasm.x > cursor) {
+      sections.push({
+        x: cursor,
+        y: WORLD.floorY,
+        w: chasm.x - cursor,
+        h: WORLD.floorHeight,
+        kind: "floor",
+      });
+    }
+    cursor = chasm.x + chasm.w;
+  }
+  if (cursor < WORLD.width) {
+    sections.push({
+      x: cursor,
+      y: WORLD.floorY,
+      w: WORLD.width - cursor,
+      h: WORLD.floorHeight,
+      kind: "floor",
+    });
+  }
+  return sections;
+}
+
+function findSafeClimbX(platform, floors, width, floorHazards = []) {
+  const candidates = [];
+  const start = platform.x + 18;
+  const end = platform.x + platform.w - width - 18;
+  for (let x = start; x <= end; x += 18) {
+    candidates.push(x);
+  }
+  candidates.push(platform.x + (platform.w - width) / 2);
+
+  for (const x of candidates) {
+    if (x < 102 || x + width > 1178) continue;
+    const supported = floors.some(
+      (floor) => x >= floor.x + 6 && x + width <= floor.x + floor.w - 6,
+    );
+    if (!supported) continue;
+    if (
+      floorHazards.some(
+        (hazard) =>
+          x < hazard.x + hazard.w + 10 && x + width > hazard.x - 10,
+      )
+    ) {
+      continue;
+    }
+    return Math.round(x);
+  }
+
+  return null;
+}
+
+function createClimbables(platforms, floors, chasms, hazards) {
+  const ordered = [...platforms].sort((a, b) => a.y - b.y);
+  const usedPlatforms = new Set();
+  const ladders = [];
+  const ropes = [];
+  const floorHazards = hazards.filter(
+    (hazard) =>
+      ["lava", "spikes", "flame"].includes(hazard.kind) &&
+      typeof hazard.x === "number",
+  );
+
+  const choose = (kind, preferredIndexes, width) => {
+    for (const index of preferredIndexes) {
+      const platform = ordered[index % ordered.length];
+      if (!platform || usedPlatforms.has(platform)) continue;
+      const x = findSafeClimbX(platform, floors, width, floorHazards);
+      if (x === null) continue;
+      if (chasms.some((chasm) => x < chasm.x + chasm.w && x + width > chasm.x)) {
+        continue;
+      }
+      usedPlatforms.add(platform);
+      const topY = platform.y - 74;
+      return {
+        x,
+        y: topY,
+        w: width,
+        h: WORLD.floorY - topY,
+        kind,
+        topPlatformY: platform.y,
+      };
+    }
+    return null;
+  };
+
+  const ladder = choose("ladder", [1, 2, 3, 0, 4, 5], 30);
+  const rope = choose("rope", [4, 5, 3, 2, 1, 0], 20);
+
+  if (ladder) ladders.push(ladder);
+  if (rope) ropes.push(rope);
+
+  return { ladders, ropes };
 }
 
 function itemPosition(platform) {
@@ -443,6 +626,15 @@ export const ROOMS = ROOM_SEEDS.map((seed, index) => {
     }
   }
 
+  const chasms = layout.chasms.map((chasm) => ({ ...chasm }));
+  const floors = buildFloorSections(chasms);
+  const { ladders, ropes } = createClimbables(
+    uniquePlatforms,
+    floors,
+    chasms,
+    layout.hazards,
+  );
+
   const itemNames = RELIC_NAMES.slice(index * 5, index * 5 + 5);
   const itemTypes = ["relic", "relic", "secret", "secret", "key"];
   const ids = [
@@ -457,7 +649,13 @@ export const ROOMS = ROOM_SEEDS.map((seed, index) => {
     const platform = uniquePlatforms[itemIndex];
     const position = itemPosition(platform);
     const name = type === "key" ? KEY_NAMES[index] : itemNames[itemIndex];
-    return {
+    const conceal =
+      type === "secret" && itemIndex === 2
+        ? "faint"
+        : type === "secret" && itemIndex === 3
+          ? "wall"
+          : null;
+    const item = {
       id: ids[itemIndex],
       roomId: id,
       type,
@@ -465,8 +663,22 @@ export const ROOMS = ROOM_SEEDS.map((seed, index) => {
       description: itemDescription(type, seed.name, name),
       ...position,
       hidden: false,
+      conceal,
       quality: type === "key" ? "key" : type === "relic" ? "relic" : "secret",
     };
+
+    if (conceal === "wall") {
+      const zoneW = 112;
+      const zoneH = 108;
+      item.revealZone = {
+        x: Math.round(Math.min(WORLD.width - zoneW - 8, Math.max(8, item.x - zoneW / 2))),
+        y: Math.round(item.y - 72),
+        w: zoneW,
+        h: zoneH,
+      };
+    }
+
+    return item;
   });
 
   const hiddenPosition = itemPosition(uniquePlatforms[5]);
@@ -478,6 +690,7 @@ export const ROOMS = ROOM_SEEDS.map((seed, index) => {
     description: itemDescription("secret", seed.name, itemNames[4]),
     ...hiddenPosition,
     hidden: true,
+    conceal: null,
     quality: "secret",
   };
 
@@ -506,8 +719,13 @@ export const ROOMS = ROOM_SEEDS.map((seed, index) => {
     themeIndex: index,
     platforms: [
       ...uniquePlatforms.map((platform) => ({ ...platform, kind: "stone" })),
-      { x: 0, y: WORLD.floorY, w: WORLD.width, h: WORLD.floorHeight, kind: "floor" },
+      ...floors,
     ].sort((a, b) => a.y - b.y),
+    floors,
+    chasms,
+    ladders,
+    ropes,
+    climbables: [...ladders, ...ropes],
     hazards: layout.hazards.map((hazard) => ({ ...hazard })),
     puzzle: {
       plates: layout.plates.map((plate, plateIndex) => ({

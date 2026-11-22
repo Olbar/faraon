@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createPlayer } from "../src/player.js";
-import { TouchControls } from "../src/touch-controls.js";
+import { KeyboardControls, TouchControls } from "../src/touch-controls.js";
 import { DIFFICULTY_BY_ID } from "../src/content.js";
 
 describe("сенсорное управление", () => {
@@ -64,6 +64,7 @@ describe("сенсорное управление", () => {
     const controls = new TouchControls();
     controls.press("right");
     controls.press("jump");
+    controls.press("up");
     controls.releaseAll();
 
     const input = controls.getInput();
@@ -71,11 +72,41 @@ describe("сенсорное управление", () => {
     assert.equal(input.right, false);
     assert.equal(input.jump, false);
     assert.equal(input.interact, false);
+    assert.equal(input.up, false);
+    assert.equal(input.down, false);
+  });
+
+  it("поддерживает отдельные кнопки подъёма и спуска", () => {
+    const controls = new TouchControls();
+    controls.pointerDown(21, "up");
+    controls.pointerDown(22, "down");
+
+    assert.equal(controls.getInput().up, true);
+    assert.equal(controls.getInput().down, true);
+
+    controls.pointerUp(21);
+    assert.equal(controls.getInput().up, false);
+    assert.equal(controls.getInput().down, true);
+  });
+
+  it("назначает клавиши стрелок вверх и вниз для лазания", () => {
+    const keyboard = new KeyboardControls();
+    keyboard.setKey("ArrowUp", true);
+    keyboard.setKey("KeyE", true);
+
+    const input = keyboard.getInput();
+    assert.equal(input.up, true);
+    assert.equal(input.interact, true);
+    assert.equal(input.jump, false);
+
+    keyboard.setKey("ArrowUp", false);
+    keyboard.setKey("ArrowDown", true);
+    assert.equal(keyboard.getInput().down, true);
   });
 
   it("применяет выбранную сложность к игроку", () => {
     const easy = createPlayer({ difficulty: DIFFICULTY_BY_ID.get("wanderer") });
-    const nightmare = createPlayer({ difficulty: DIFFICULTY_BY_ID.get("cursed") });
+    const nightmare = createPlayer({ difficulty: DIFFICULTY_BY_ID.get("nightmare") });
 
     assert.ok(easy.maxHealth > nightmare.maxHealth);
     assert.equal(easy.health, easy.maxHealth);

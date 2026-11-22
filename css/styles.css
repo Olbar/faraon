@@ -878,6 +878,47 @@ p {
   color: var(--gold-bright);
 }
 
+.touch-move {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "up down"
+    "left right";
+  align-items: end;
+  gap: 6px;
+}
+
+.touch-climb-up { grid-area: up; }
+.touch-climb-down { grid-area: down; }
+.touch-left { grid-area: left; }
+.touch-right { grid-area: right; }
+
+.touch-climb {
+  width: clamp(46px, 8vw, 58px);
+  height: clamp(46px, 8vw, 58px);
+  border-color: rgba(121, 201, 184, 0.34);
+  background:
+    radial-gradient(circle at 38% 26%, rgba(121, 201, 184, 0.16), transparent 56%),
+    rgba(24, 31, 38, 0.88);
+}
+
+.touch-climb svg {
+  width: 34%;
+  height: 34%;
+  color: var(--teal);
+}
+
+.touch-climb span {
+  font-size: clamp(0.43rem, 1.3vw, 0.56rem);
+}
+
+.touch-climb.is-pressed {
+  border-color: rgba(181, 255, 240, 0.72);
+  background:
+    radial-gradient(circle at 38% 26%, rgba(121, 201, 184, 0.3), transparent 58%),
+    rgba(31, 57, 51, 0.94);
+}
+
 .touch-jump {
   width: clamp(82px, 13.5vw, 122px);
   height: clamp(82px, 13.5vw, 122px);
@@ -3487,9 +3528,10 @@ p {
   }
 
   .hud-room {
-    min-width: 58px;
-    max-width: 74px;
-    padding-right: 0.3rem;
+    min-width: 52px;
+    max-width: 68px;
+    flex: 0 1 68px;
+    padding-right: 0.28rem;
   }
 
   .hud-room .hud-label {
@@ -3510,6 +3552,7 @@ p {
 
   .hud-stat {
     min-width: 0;
+    flex: 0 0 auto;
     gap: 0.12rem;
   }
 
@@ -3527,6 +3570,7 @@ p {
   .hud-stat-copy strong {
     font-size: 0.64rem;
     letter-spacing: 0;
+    white-space: nowrap;
   }
 
   .hud-health {
@@ -3577,14 +3621,14 @@ p {
   }
 
   .utility-button {
-    min-width: 34px;
-    min-height: 36px;
-    padding: 0.15rem;
+    min-width: 33px;
+    min-height: 35px;
+    padding: 0.12rem;
   }
 
   .utility-button svg {
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
   }
 
   .touch-interact {
@@ -3636,7 +3680,26 @@ p {
   }
 
   .touch-move {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 64px;
+    grid-template-areas:
+      "up"
+      "down"
+      "left"
+      "right";
+    gap: 6px;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .touch-move .touch-climb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .touch-move .touch-direction {
+    width: 64px;
+    height: 64px;
   }
 
   .touch-actions {

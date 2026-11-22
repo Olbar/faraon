@@ -13,6 +13,9 @@ export const PLAYER_PHYSICS = Object.freeze({
   maxFallSpeed: 1050,
   coyoteTime: 0.1,
   jumpBuffer: 0.12,
+  climbSpeed: 190,
+  climbHorizontalSpeed: 105,
+  climbDetachTime: 0.28,
 });
 
 export class Player {
@@ -41,18 +44,43 @@ export class Player {
     this.previousJump = false;
     this.animationTime = options.animationTime ?? 0;
     this.hurtFlash = 0;
+    this.onLadder = false;
+    this.climbing = false;
+    this.climbable = null;
+    this.climbCooldown = 0;
     this.lastSafe = {
       x: this.x,
       y: this.y,
     };
   }
 
+  findClimbable(room) {
+    if (!room?.climbables) return null;
+    const centerX = this.x + this.width / 2;
+    const top = this.y;
+    const bottom = this.y + this.height;
+    for (const climbable of room.climbables) {
+      if (
+        centerX >= climbable.x - 12 &&
+        centerX <= climbable.x + climbable.w + 12 &&
+        bottom >= climbable.y + 6 &&
+        top <= climbable.y + climbable.h
+      ) {
+        return climbable;
+      }
+    }
+    return null;
+  }
+
   update(input = {}, dt = 1 / 60, room = null) {
     const step = Math.min(Math.max(dt, 0), 0.05);
     this.animationTime += step;
+    this.climbCooldown = Math.max(0, this.climbCooldown - step);
 
     const left = Boolean(input.left);
     const right = Boolean(input.right);
+    const up = Boolean(input.up);
+    const down = Boolean(input.down);
     const direction = (right ? 1 : 0) - (left ? 1 : 0);
 
     if (direction !== 0) {
@@ -61,6 +89,10 @@ export class Player {
     } else {
       this.vx = 0;
     }
+
+    const climbable = room ? this.findClimbable(room) : null;
+    this.onLadder = Boolean(climbable);
+    this.climbable = climbable;
 
     const jumpHeld = Boolean(input.jump);
     if (jumpHeld && !this.previousJump) {
@@ -76,18 +108,36 @@ export class Player {
     }
 
     if (this.jumpBuffer > 0) {
-      if (this.onGround || this.coyote > 0) {
+      if (this.climbing) {
+        this.detachFromLadder();
+        this.performJump(PLAYER_PHYSICS.jumpVelocity);
+      } else if (this.onGround || this.coyote > 0) {
         this.performJump(PLAYER_PHYSICS.jumpVelocity);
       } else if (this.jumpsUsed < 2) {
         this.performJump(PLAYER_PHYSICS.secondJumpVelocity);
       }
     }
-
     this.previousJump = jumpHeld;
-    this.vy = Math.min(
-      this.vy + PLAYER_PHYSICS.gravity * step,
-      PLAYER_PHYSICS.maxFallSpeed,
-    );
+
+    const wantsClimb =
+      Boolean(climbable) &&
+      this.climbCooldown <= 0 &&
+      (up || down || this.climbing);
+
+    if (wantsClimb) {
+      this.climbing = true;
+      this.onGround = false;
+      this.jumping = false;
+      this.vy = up ? -PLAYER_PHYSICS.climbSpeed : down ? PLAYER_PHYSICS.climbSpeed : 0;
+      this.vx = direction * PLAYER_PHYSICS.climbHorizontalSpeed;
+      this.jumpsUsed = 0;
+    } else {
+      this.climbing = false;
+      this.vy = Math.min(
+        this.vy + PLAYER_PHYSICS.gravity * step,
+        PLAYER_PHYSICS.maxFallSpeed,
+      );
+    }
 
     const previousBottom = this.y + this.height;
     this.x += this.vx * step;
@@ -98,27 +148,55 @@ export class Player {
       const rightLimit = WORLD.width - this.width - 16;
       this.x = Math.max(leftLimit, Math.min(rightLimit, this.x));
 
-      let landed = false;
-      for (const platform of room.platforms) {
-        const horizontalOverlap =
-          this.x + this.width > platform.x && this.x < platform.x + platform.w;
-        if (!horizontalOverlap || this.vy < 0) continue;
-
-        const platformTop = platform.y;
-        const currentBottom = this.y + this.height;
-        if (previousBottom <= platformTop + 2 && currentBottom >= platformTop) {
-          this.y = platformTop - this.height;
+      if (this.climbing && climbable) {
+        if (this.y < climbable.y) {
+          this.y = climbable.y;
           this.vy = 0;
+        }
+        const ladderBottom = climbable.y + climbable.h;
+        if (this.y + this.height >= ladderBottom) {
+          this.y = ladderBottom - this.height;
+          this.vy = 0;
+          this.climbing = false;
           this.onGround = true;
           this.jumpsUsed = 0;
-          this.jumping = false;
-          landed = true;
-          break;
+          this.rememberSafePosition(this.x, this.y);
+        } else {
+          this.onGround = false;
         }
-      }
+        const stillOnLadder = this.findClimbable(room);
+        if (!stillOnLadder) {
+          this.climbing = false;
+          this.onLadder = false;
+        }
+      } else {
+        let landed = false;
+        for (const platform of room.platforms) {
+          const horizontalOverlap =
+            this.x + this.width > platform.x && this.x < platform.x + platform.w;
+          if (!horizontalOverlap || this.vy < 0) continue;
 
-      if (!landed) {
-        this.onGround = false;
+          const platformTop = platform.y;
+          const currentBottom = this.y + this.height;
+          if (previousBottom <= platformTop + 2 && currentBottom >= platformTop) {
+            this.y = platformTop - this.height;
+            this.vy = 0;
+            this.onGround = true;
+            this.jumpsUsed = 0;
+            this.jumping = false;
+            this.rememberSafePosition(
+              Math.max(platform.x + 16, Math.min(platform.x + platform.w - 16, this.x + this.width / 2)) -
+                this.width / 2,
+              this.y,
+            );
+            landed = true;
+            break;
+          }
+        }
+
+        if (!landed) {
+          this.onGround = false;
+        }
       }
 
       if (this.y + this.height > WORLD.height + 120) {
@@ -131,6 +209,22 @@ export class Player {
     this.invulnerable = Math.max(0, this.invulnerable - step);
     this.hurtFlash = Math.max(0, this.hurtFlash - step);
     return this;
+  }
+
+  rememberSafePosition(x, y) {
+    if (x < 24 || x > WORLD.width - this.width - 24) return;
+    this.lastSafe = { x, y };
+  }
+
+  detachFromLadder() {
+    this.climbing = false;
+    this.onLadder = false;
+    this.climbCooldown = PLAYER_PHYSICS.climbDetachTime;
+    this.vy = 0;
+  }
+
+  isClimbing() {
+    return Boolean(this.climbing && this.onLadder);
   }
 
   performJump(velocity) {
@@ -202,6 +296,11 @@ export class Player {
     this.hurtFlash = 0;
     this.previousJump = false;
     this.fallen = false;
+    this.onLadder = false;
+    this.climbing = false;
+    this.climbable = null;
+    this.climbCooldown = 0;
+    this.lastSafe = { x, y };
   }
 
   resetTo(x, y, options = {}) {

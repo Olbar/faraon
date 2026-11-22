@@ -137,6 +137,8 @@ describe("система возвращения и сохранения прог
     for (const [index] of ROOMS[0].puzzle.plates.entries()) {
       game.touchPuzzlePlate(1, index);
     }
+    const wallSecret = ROOMS[0].items.find((item) => item.conceal === "wall");
+    game.revealSecret(1, wallSecret.id);
     for (const item of ROOMS[0].items) {
       game.collectItem(item.id);
     }

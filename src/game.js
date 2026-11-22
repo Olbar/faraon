@@ -66,6 +66,7 @@ function createRoomState(roomId, visited = false) {
     collected: new Set(),
     puzzlePlates: new Set(),
     puzzleSolved: false,
+    revealedSecrets: new Set(),
     doors: new Set(),
   };
 }
@@ -176,6 +177,7 @@ export class Game {
           collected: [...state.collected],
           puzzlePlates: [...state.puzzlePlates],
           puzzleSolved: state.puzzleSolved,
+          revealedSecrets: [...state.revealedSecrets],
           doors: [...state.doors],
         }
       : null;
@@ -199,6 +201,9 @@ export class Game {
     if (item.hidden) {
       return this.isPuzzleSolved(item.roomId);
     }
+    if (item.conceal === "wall") {
+      return this.isSecretRevealed(item.roomId, itemId);
+    }
     return true;
   }
 
@@ -210,6 +215,29 @@ export class Game {
     if (item.hidden) {
       return this.isPuzzleSolved(id);
     }
+    if (item.conceal === "wall") {
+      return this.isSecretRevealed(id, itemId);
+    }
+    return true;
+  }
+
+  isSecretRevealed(roomId, itemId) {
+    const id = normalizeRoomId(roomId);
+    const state = this.getRoomState(id);
+    return Boolean(state?.revealedSecrets.has(itemId));
+  }
+
+  revealSecret(roomId, itemId) {
+    const id = normalizeRoomId(roomId);
+    const item = ITEM_BY_ID.get(itemId);
+    if (!id || !item || item.roomId !== id || id !== this.currentRoom) return false;
+    if (item.conceal !== "wall" || item.hidden) return false;
+    const state = this.getRoomState(id);
+    if (state.revealedSecrets.has(itemId) || this.isCollected(itemId)) return false;
+
+    state.revealedSecrets.add(itemId);
+    this.autosave();
+    this.lastReveal = { item, roomId: id };
     return true;
   }
 
@@ -219,6 +247,9 @@ export class Game {
     if (item.roomId !== this.currentRoom) return false;
     if (this.isCollected(itemId) || this.inventoryHas(itemId)) return false;
     if (item.hidden && !this.isPuzzleSolved(item.roomId)) return false;
+    if (item.conceal === "wall" && !this.isSecretRevealed(item.roomId, itemId)) {
+      return false;
+    }
 
     const state = this.getRoomState(item.roomId);
     state.collected.add(itemId);
@@ -654,6 +685,7 @@ export class Game {
           collected: [...state.collected],
           puzzlePlates: [...state.puzzlePlates],
           puzzleSolved: state.puzzleSolved,
+          revealedSecrets: [...state.revealedSecrets],
           doors: [...state.doors],
         };
       }),
@@ -704,6 +736,11 @@ export class Game {
             }
           }
           state.puzzleSolved = Boolean(saved.puzzleSolved);
+          for (const itemId of saved.revealedSecrets ?? []) {
+            if (ITEM_BY_ID.has(itemId) && ITEM_BY_ID.get(itemId).roomId === room.id) {
+              state.revealedSecrets.add(itemId);
+            }
+          }
           for (const door of saved.doors ?? []) state.doors.add(door);
         }
         return [room.id, state];
@@ -726,7 +763,12 @@ export class Game {
 
     for (const itemId of this.inventory.keys()) {
       const item = ITEM_BY_ID.get(itemId);
-      if (item) this.getRoomState(item.roomId).collected.add(itemId);
+      if (item) {
+        this.getRoomState(item.roomId).collected.add(itemId);
+        if (item.conceal === "wall") {
+          this.getRoomState(item.roomId).revealedSecrets.add(itemId);
+        }
+      }
     }
 
     const visitedFromRooms = [...this.roomStates.entries()]

@@ -109,7 +109,7 @@
             <small id="room-banner-subtitle">Первый луч ещё не коснулся песка</small>
           </div>
           <div id="interaction-prompt" class="interaction-prompt" hidden>
-            <span class="interaction-key" aria-hidden="true">Е</span>
+            <span class="interaction-key" aria-hidden="true">⏎</span>
             <span id="interaction-text">Нажмите кнопку взаимодействия</span>
           </div>
           <div id="autosave-indicator" class="autosave-indicator" aria-live="polite">
@@ -123,18 +123,26 @@
 
       <section id="touch-controls" class="touch-controls" aria-label="Сенсорное управление">
         <div class="touch-cluster touch-move">
-          <button type="button" class="touch-button touch-direction" data-control="left" aria-label="Движение влево">
+          <button type="button" class="touch-button touch-climb touch-climb-up" data-control="up" aria-label="Подъём по лестнице или канату">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 38V12m-9 9 9-10 9 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Вверх</span>
+          </button>
+          <button type="button" class="touch-button touch-climb touch-climb-down" data-control="down" aria-label="Спуск по лестнице или канату">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10v26m-9-9 9 10 9-10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Вниз</span>
+          </button>
+          <button type="button" class="touch-button touch-direction touch-left" data-control="left" aria-label="Движение влево">
             <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M29 12 17 24l12 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span>Влево</span>
           </button>
-          <button type="button" class="touch-button touch-direction" data-control="right" aria-label="Движение вправо">
+          <button type="button" class="touch-button touch-direction touch-right" data-control="right" aria-label="Движение вправо">
             <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12 31 24 19 36" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span>Вправо</span>
           </button>
         </div>
         <div class="touch-center-hint">
           <span>Удерживайте для бега</span>
-          <small>Можно двигаться и прыгать одновременно</small>
+          <small>Движение, прыжок и лазание работают одновременно</small>
         </div>
         <div class="touch-cluster touch-actions">
           <button type="button" class="touch-button touch-interact" data-control="interact" aria-label="Взаимодействие">
@@ -151,8 +159,9 @@
 
     <div class="keyboard-strip">
       <span><b>←</b><b>→</b> движение</span>
+      <span><b>↑</b><b>↓</b> лазание</span>
       <span><b>Пробел</b> прыжок</span>
-      <span><b>↑</b> взаимодействие</span>
+      <span><b>Ввод</b> взаимодействие</span>
       <span><b>М</b> карта</span>
       <span><b>П</b> подсказка</span>
       <span><b>И</b> инвентарь</span>
