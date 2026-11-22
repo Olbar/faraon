@@ -1,9 +1,25 @@
 {
-  "name": "curse-of-the-pyramid",
+  "name": "faraon",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Проклятие пирамиды: Побег из вечности — браузерная приключенческая игра",
+  "homepage": "https://olbar.github.io/faraon/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Olbar/faraon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Olbar/faraon/issues"
+  },
+  "author": "Olbar",
+  "keywords": [
+    "game",
+    "javascript",
+    "canvas",
+    "pyramid",
+    "browser-game"
+  ],
   "scripts": {
     "test": "node --test --test-isolation=none \"tests/*.test.js\"",
     "test:watch": "node --test --test-isolation=none --watch \"tests/*.test.js\"",
